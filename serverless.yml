@@ -4,11 +4,11 @@ service: aws-test-2
 frameworkVersion: '3'
 
 # package:
-#   individually: true  # TODO: what is this?
 package:
-  exclude:
-    - node_modules/**
-    - venv/**
+  individually: true # package each module (eg.: "backend") individually
+  patterns:
+    - "!node_modules/**"
+    - "!venv/**"
 
 
 provider:
@@ -32,17 +32,19 @@ plugins:
 
 custom:
   pythonRequirements:
-    dockerizePip: non-linux
+    slim: true
+    # dockerizePip: non-linux
+    # individually: true   # package each module (eg.: "backend") individually
   config:
     s3_bucket_name: lorrgs
     s3_origin_path: /
-    cloudFrontOriginAccessIdentityId: 
 
 
 functions:
   api:
-    handler: handler.handler   # python file + function/object name
-    # name: test-${sls:stage}-lambdaName  # aka: id
+    runtime: python3.8
+    module: backend
+    handler: handler.handler
     environment:
       STAGE: ${self:provider.stage}
     events:
@@ -50,13 +52,36 @@ functions:
       - http: GET /{proxy+}
     memorySize: 256 # optional, in MB, default is 1024
     timeout: 30 # optional, in seconds, default is 6
-      # - cloudFront:
-      #     eventType: viewer-response
-      #     origin: s3://lorrgs.s3.amazonaws.com/api
-      #     # pathPattern: /docs*
+
 
 resources:
   Resources:
+
+    #########################
+    # OriginAccessIdentity for our S3 Bucket
+    cloudfrontoriginaccessidentity:
+      Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+      Properties: 
+        CloudFrontOriginAccessIdentityConfig:   # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-cloudfront-cloudfrontoriginaccessidentity.html
+          Comment: ""
+
+    # DefaultCachePolicy:
+    #   Type: AWS::CloudFront::CachePolicy
+    #   Properties:
+    #     CachePolicyConfig:
+    #       Name: api-static
+    #       MinTTL: 1
+    #       MaxTTL: 31536000
+    #       DefaultTTL: 86400
+    #       ParametersInCacheKeyAndForwardedToOrigin:
+    #         CookiesConfig:
+    #           CookieBehavior: none
+    #         EnableAcceptEncodingBrotli: true
+    #         EnableAcceptEncodingGzip: true
+    #         HeadersConfig:
+    #           HeaderBehavior: none
+    #         QueryStringsConfig:
+    #           QueryStringBehavior: all
 
     #########################
     CloudFrontDistribution:
@@ -65,29 +90,28 @@ resources:
         DistributionConfig:
           Enabled: true
           Comment: test_2a
+          PriceClass: PriceClass_100
 
           #########################
-          # Cache
+          # Cache Polcies
+
+
+          #########################
+          # Behaviours
           DefaultCacheBehavior:
-            AllowedMethods:
-            - GET
-            - HEAD
-            MinTTL: 0
-            MaxTTL: 10
-            DefaultTTL: 10
+            AllowedMethods: [GET, OPTIONS, HEAD]
             TargetOriginId: s3_origin
-            ForwardedValues:
-              QueryString: true
-              Cookies:
-                Forward: all
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # Managed-CachingOptimized
             ViewerProtocolPolicy: redirect-to-https
           # Cache
           CacheBehaviors:
-            - PathPattern: ping
+            - PathPattern: "api/*"
               TargetOriginId: lambda_origin
-              ForwardedValues:
-                QueryString: True
+              CachePolicyId: 2e54312d-136d-493c-8eb9-b001f22f67d2 # Managed-Amplify
               ViewerProtocolPolicy: redirect-to-https
+              # Compress: true
+              # ForwardedValues:
+              #   QueryString: true
 
           #########################
           # CloudFront Origins
@@ -96,21 +120,15 @@ resources:
           - Id: s3_origin
             # DomainName: ${self:custom.config.s3_bucket_name}.s3.${self:provider.region}.amazonaws.com
             DomainName: lorrgs.s3.eu-west-1.amazonaws.com
-            # OriginPath: ${self:custom.config.s3_origin_path}
             S3OriginConfig:
-              OriginAccessIdentity: origin-access-identity/cloudfront/E243XMV9VPBBLW    # https://console.aws.amazon.com/cloudfront/v3/home#/oai
+              OriginAccessIdentity:
+                Fn::Join: ["",  [origin-access-identity/cloudfront/, Ref: cloudfrontoriginaccessidentity]]
           # 2) Lambda Origin
           - Id: lambda_origin
             DomainName:
-              Fn::Join:
-              - ""
-              - - Ref: ApiGatewayRestApi
-                - ".execute-api.${self:provider.region}.amazonaws.com"
-            OriginPath: /dev
+              Fn::Join: ["", [Ref: ApiGatewayRestApi, ".execute-api.${self:provider.region}.amazonaws.com"]]
+            OriginPath: /${self:provider.stage}
             CustomOriginConfig:
-              HTTPPort: '80'
-              HTTPSPort: '443'
+              HTTPPort: 80
+              HTTPSPort: 443
               OriginProtocolPolicy: https-only
-
-          #########################
-          # CloudFront Behaviours
