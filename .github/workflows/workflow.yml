@@ -15,8 +15,11 @@ jobs:
       # - run: npm run build
       # - run: npm test
       - uses: jakejarvis/s3-sync-action@master
-        # with:
-        #   args: --acl public-read --follow-symlinks --delete
+        with:
+          args:
+            --follow-symlinks
+            --delete
+            --cache-control "max-age=30"  # better than triggering cache invalidates?
         env:
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

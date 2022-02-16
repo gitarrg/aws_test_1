@@ -13,27 +13,19 @@ package:
 provider:
   name: aws
   region: eu-west-1
-  stage: ${opt:stage, "dev"}  # not sure what this does
+  stage: ${opt:stage, "dev"}
   runtime: python3.8
-
-  # cloudFront:
-  #   cachePolicies:
-  #     testCachePolicy:
-  #       MinTTL: 0
-  #       MaxTTL: 86000
-  #       DefaultTTL: 3600
 
 
 plugins:
   - serverless-python-requirements
-  # - serverless-wsgi
+  # - serverless-wsgi  # TODO: check what this was for
 
 
 custom:
   pythonRequirements:
     slim: true
-    # dockerizePip: non-linux
-    # individually: true   # package each module (eg.: "backend") individually
+    # dockerizePip: non-linux  # TODO
   config:
     s3_bucket_name: lorrgs
     s3_origin_path: /
@@ -137,8 +129,8 @@ resources:
           # 1) S3 Origin
           - Id: s3_origin
             OriginPath: /web
-            # DomainName: ${self:custom.config.s3_bucket_name}.s3.${self:provider.region}.amazonaws.com
-            DomainName: lorrgs.s3.eu-west-1.amazonaws.com
+            DomainName: ${self:custom.config.s3_bucket_name}.s3.${self:provider.region}.amazonaws.com
+            # DomainName: lorrgs.s3.eu-west-1.amazonaws.com
             S3OriginConfig:
               OriginAccessIdentity:
                 Fn::Join: ["",  [origin-access-identity/cloudfront/, Ref: cloudfrontoriginaccessidentity]]
