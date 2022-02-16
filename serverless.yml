@@ -82,6 +82,26 @@ resources:
     #           HeaderBehavior: none
     #         QueryStringsConfig:
     #           QueryStringBehavior: all
+    ApiOriginCachePolicy:
+      Type: AWS::CloudFront::CachePolicy
+      Properties:
+        CachePolicyConfig:
+          Name: ${self:service}-${self:provider.stage}-api-cache-policy
+          MinTTL: 10
+          MaxTTL: 120
+          DefaultTTL: 60
+          ParametersInCacheKeyAndForwardedToOrigin:
+            CookiesConfig:
+              CookieBehavior: none
+            EnableAcceptEncodingGzip: true
+            EnableAcceptEncodingBrotli: true
+            HeadersConfig:
+              HeaderBehavior: whitelist
+              Headers:
+                - Authorization
+                - Content-Type
+            QueryStringsConfig:
+              QueryStringBehavior: all
 
     #########################
     CloudFrontDistribution:
@@ -91,6 +111,7 @@ resources:
           Enabled: true
           Comment: test_2a
           PriceClass: PriceClass_100
+          DefaultRootObject: "index.html"
 
           #########################
           # Cache Polcies
@@ -107,17 +128,16 @@ resources:
           CacheBehaviors:
             - PathPattern: "api/*"
               TargetOriginId: lambda_origin
-              CachePolicyId: 2e54312d-136d-493c-8eb9-b001f22f67d2 # Managed-Amplify
+              CachePolicyId:
+                Ref: ApiOriginCachePolicy
               ViewerProtocolPolicy: redirect-to-https
-              # Compress: true
-              # ForwardedValues:
-              #   QueryString: true
 
           #########################
           # CloudFront Origins
           Origins:
           # 1) S3 Origin
           - Id: s3_origin
+            OriginPath: /web
             # DomainName: ${self:custom.config.s3_bucket_name}.s3.${self:provider.region}.amazonaws.com
             DomainName: lorrgs.s3.eu-west-1.amazonaws.com
             S3OriginConfig:

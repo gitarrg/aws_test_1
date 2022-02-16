@@ -12,7 +12,17 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    return "API ROOT! 5"
+    return "root-root!"
+
+
+@app.get("/api")
+def api_root():
+    return "API ROOT"
+
+
+@app.get("/api/sub")
+def api_sub():
+    return "api sub"
 
 
 @app.get("/ping")
