@@ -12,7 +12,7 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    return "root-root!"
+    return "root-root-root!"
 
 
 @app.get("/api")
