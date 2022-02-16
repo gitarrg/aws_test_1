@@ -1,4 +1,3 @@
-org: arrgmin
 app: aws-test-2
 service: aws-test-2
 frameworkVersion: '3'

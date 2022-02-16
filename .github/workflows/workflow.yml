@@ -34,14 +34,13 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: "16.x"
-      - run: npm ci
-
-    - name: Serverless Authentication
-        run: sls config credentials --provider aws --key ${{secrets.AWS_ACCESS_KEY_ID}} --secret ${{secrets.AWS_SECRET_ACCESS_KEY}}
-
+      - name: Install Packages
+        run: npm ci
+      - name: Serverless Authentication
+        run: npx serverless config credentials --provider aws --key ${{secrets.AWS_ACCESS_KEY_ID}} --secret ${{secrets.AWS_SECRET_ACCESS_KEY}}
       - name: serverless deploy
+        run: npx serverless deploy --verbose
         # uses: serverless/github-action@v3
-        run: serverless deploy --verbose
         # with:
         #   args: deploy
         # env:
